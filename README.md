@@ -1,0 +1,26 @@
+version-1
+
+1.结构：
+api目录是后端处理json数据的相关函数，完全在json数据层，只需要返回结果对应的json数据，不涉及http层
+base目录是http_parse_wrapper解析http报文的依赖文件
+主目录中包含主要的HttpServer和Httpconn，TcpServer和TcpConnection的编写
+
+2.编写：
+以reactor为事件驱动模型的网络结构，Eventloop作为mainloop处理所有监听的事件，是最上层的管理者。
+
+HttpServer作为TcpServer和CHttpconn的管理者，是事件处理的中心地带。一切连接和事件处理都需要经过HttpServer。
+
+TcpServer负责连接请求的处理，旗下的TcpConnection作为数据收发的载体
+
+CHttpconn，一条http连接对应一个CHttpconn。 负责，
+解析http报文，
+解析json数据并存储，处理逻辑并与数据库交互，组织json数据，
+回发http报文数据，
+
+3.功能：
+是初步的HttpServer版本，
+可以做到识别并处理register和login的url请求，解析并回发对应的http报文
+并未与MySQL和Redis数据库和fastDFS分布式文件系统建立交互。
+
+
+（http报文解析采用开源的http_parse_wrapper, json数据内容解析采用开源的jsoncpp）
