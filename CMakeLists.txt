@@ -1,0 +1,14 @@
+
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/base)
+INCLUDE_DIRECTORIES(/usr/include/jsoncpp)
+
+AUX_SOURCE_DIRECTORY(${CMAKE_CURRENT_SOURCE_DIR}/base BASE_LIST)
+AUX_SOURCE_DIRECTORY(${CMAKE_CURRENT_SOURCE_DIR}/api API_LIST)
+ADD_EXECUTABLE(tc_http_srv main.cc http_parser_wrapper.cc http_parser.cc http_conn.cc ${BASE_LIST} ${API_LIST})
+
+TARGET_LINK_LIBRARIES(tc_http_srv muduo_net jsoncpp)
+
+
+
+
