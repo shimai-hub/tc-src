@@ -1,9 +1,13 @@
 version-1
 
 1.结构：
-api目录是后端处理json数据的相关函数，完全在json数据层，只需要返回结果对应的json数据，不涉及http层
-base目录是http_parse_wrapper解析http报文的依赖文件
-主目录中包含主要的HttpServer和Httpconn，TcpServer和TcpConnection的编写
+TcpServer负责连接建立，实际的数据收发载体
+EventLoop提供TcpServer的事件驱动
+HttpServer封装了TcpServer，负责连接管理，将收到数据交由对应单一连接的HttpConn处理
+HttpConn负责单个连接的逻辑处理（调用_Handle），解析http报文，根据不同url，将正文交由不同_Handle函数处理
+_Handle函数调用api目录的函数，将返回的json数据打包成http报文回发
+Api负责json数据的序列化和反序列化，与后端交互，返回处理结果
+
 
 2.编写：
 以reactor为事件驱动模型的网络结构，Eventloop作为mainloop处理所有监听的事件，是最上层的管理者。

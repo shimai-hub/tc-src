@@ -1,6 +1,7 @@
 #include "api_login.h"
 #include "muduo/base/Logging.h"
 #include <json/json.h>
+#include <uuid/uuid.h>
 
 using namespace std;
 
@@ -25,14 +26,14 @@ int decodeLoginJson(string& post_data, string& user_name, string& pwd){
     Json::Reader reader;
     reader.parse(post_data, root);
 
-    if(root["userName"].isNull()){
-        LOG_ERROR << "userName null";
+    if(root["user"].isNull()){
+        LOG_ERROR << "user null";
         return -1;
     }
-    user_name = root["userName"].asString();
+    user_name = root["user"].asString();
 
     if(root["pwd"].isNull()){
-        LOG_ERROR << "userName null";
+        LOG_ERROR << "pwd null";
         return -1;
     }
     pwd = root["pwd"].asString();
@@ -40,14 +41,65 @@ int decodeLoginJson(string& post_data, string& user_name, string& pwd){
     return 0;
 }
 
+std::string generateUUID(){
+    uuid_t uuid;
+    uuid_generate_time(uuid);
+    char uuidStr[40] = {0};
+    uuid_unparse(uuid, uuidStr);
+    return std::string(uuidStr);
+}
+
 int verifyUserPassword(string& user_name, string& pwd){
     int ret = 0;
+    //从mysql连接池中取连接
+    CDBManager* db_manager = CDBManager::getInstance();
+    CDBConn* db_conn = db_manager->GetDBConn("tuchuang_master");
+    AUTO_REL_DBCONN(db_manager, db_conn);
+
+    //组织sql
+    string strSql = FormatString("select password from user_info where user_name='%s'", user_name.c_str());
+    CResultSet* result_set = db_conn->ExecuteQuery(strSql.c_str());
+    if(result_set && result_set->Next()){
+        //验证密码
+        string password = result_set->GetString("password");
+        LOG_INFO << "mysql-pwd: " << password << ", user-pwd: " <<  pwd;
+        if(password == pwd){
+            ret = 0;
+        }
+        else{
+            LOG_INFO << "password uncorrect";
+            ret = -1;
+        }
+    }
+    else{
+        ret = -1;
+    }
+
+    delete result_set;
+    
     return ret;
 }
 
 int setToken(string& user_name, string& token){
     int ret = 0;
-    token = "1234";
+    
+    //从连接池取出连接
+    CacheManager* cache_manager = CacheManager::getInstance();
+    CacheConn* cache_conn = cache_manager->GetCacheConn("token");
+    AUTO_REL_CACHECONN(cache_manager, cache_conn);
+    
+    //生成token
+    token = generateUUID();
+
+    //把token写入redis
+    if(cache_conn){
+        cache_conn->SetEx(token, 86400, user_name);
+    }
+    else{
+        ret = -1;
+    }
+
+    //返回
     return ret;
 }
 
@@ -59,7 +111,7 @@ int ApiLoginUser(string& post_data, string& resp_json){
     string pwd;
     string token;
 
-    LOG_INFO << "post_data: " << post_data;
+    // LOG_INFO << "post_data: " << post_data;
 
     //判断数据是否为空
     if(post_data.empty()){

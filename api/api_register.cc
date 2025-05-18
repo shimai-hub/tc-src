@@ -31,7 +31,7 @@ string& phone, string& email){
         LOG_ERROR << "userName null";
         return -1;
     }
-    user_name = root["user_Name"].asString();
+    user_name = root["userName"].asString();
 
     //nick_name
     if(root["nickName"].isNull()){
@@ -65,9 +65,61 @@ string& phone, string& email){
 }
 
 //json-mysql
-int registerUser(string& user_name, string& nick_name, string& pwd, string& phone,
-string& email){
+int registerUser(string& user_name, string& nick_name, string& pwd, string& phone,string& email){
+    //0，成功， 1，失败， 2，用户存在
     int ret = 0;
+    uint32_t user_id = 0;
+    //取出与数据库的连接
+    CDBManager* db_manager = CDBManager::getInstance();
+    CDBConn* db_conn = db_manager->GetDBConn("tuchuang_master");
+    if(!db_conn){
+        LOG_ERROR << "GetDBConn(tuchuang_master) failed";
+        return -1;
+    }
+    //组织sql，查询数据库
+    string str_sql = FormatString("select id from user_info where user_name='%s'", user_name.c_str());
+    CResultSet* result_set = db_conn->ExecuteQuery(str_sql.c_str());
+    //获取结果返回
+    if(result_set && result_set->Next()){
+        //存在，警告返回
+        LOG_WARN << "id: " << result_set->GetInt("id") << ", user_name: " << user_name << " 已存在";
+        ret = 2;
+    }
+    else{
+        //不存在，写入返回
+        time_t now;
+        char create_time[TIME_STRING_LEN];
+        now = time(NULL);
+        strftime(create_time, TIME_STRING_LEN, "%Y-%m-%d %H-%M:%S",localtime(&now));
+        str_sql = "insert into user_info "
+                 "(`user_name`,`nick_name`,`password`,`phone`,`email`,`create_"
+                 "time`) values(?,?,?,?,?,?)";
+        LOG_INFO << "执行: " << str_sql;
+        //预处理
+        CPrepareStatement* stmt = new CPrepareStatement();
+        if(stmt->Init(db_conn->GetMysql(), str_sql)){
+            uint32_t index = 0;
+            string c_time = create_time;
+            stmt->SetParam(index++, user_name);
+            stmt->SetParam(index++, nick_name);
+            stmt->SetParam(index++, pwd);
+            stmt->SetParam(index++, phone);
+            stmt->SetParam(index++, email);
+            stmt->SetParam(index++, c_time);
+            bool bRet = stmt->ExecuteUpdate();
+            if(bRet){
+                ret = 0;
+                user_id = stmt->GetInsertId();
+                LOG_INFO << "user_id: " << user_id;
+            }
+            else{
+                LOG_ERROR << "insert user_info failed." << str_sql;
+                ret = 1;
+            }
+            delete stmt;
+        }
+    }
+
     return ret;
 }
 
@@ -98,7 +150,7 @@ int ApiRegisterUser(string& post_data, string& resp_json){
         return -1;
     }
 
-    //判断数据库中数据存在性及是否写入数据库
+    //将注册信息写入数据库
     ret = registerUser(user_name, nick_name, pwd, phone, email);
     encodeRegisterJson(ret, resp_json);
 

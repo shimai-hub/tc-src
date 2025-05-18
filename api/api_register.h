@@ -1,7 +1,7 @@
 #ifndef __API_REGISTER_H__
 #define __API_REGISTER_H__
 
-#include <string>
+#include "api_common.h"
 
 using namespace std;
 

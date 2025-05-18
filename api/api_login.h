@@ -1,7 +1,7 @@
 #ifndef __API_LOGIN_H__
 #define __API_LOGIN_H__
 
-#include <string>
+#include "api_common.h"
 using namespace std;
 
 
