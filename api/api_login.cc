@@ -31,7 +31,7 @@ int decodeLoginJson(string& post_data, string& user_name, string& pwd){
         return -1;
     }
     user_name = root["user"].asString();
-
+    
     if(root["pwd"].isNull()){
         LOG_ERROR << "pwd null";
         return -1;
@@ -94,6 +94,7 @@ int setToken(string& user_name, string& token){
     //把token写入redis
     if(cache_conn){
         cache_conn->SetEx(token, 86400, user_name);
+        LOG_INFO << "setToken " << token << "-" << user_name;
     }
     else{
         ret = -1;

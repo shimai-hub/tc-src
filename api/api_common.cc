@@ -8,15 +8,7 @@ string s_storage_web_server_port;
 string s_shorturl_server_address;
 string s_shorturl_server_access_token;
 
-template <typename... Args>
-std::string FormatString(const std::string &format, Args... args) {
-    auto size = std::snprintf(nullptr, 0, format.c_str(), args...) +
-                1; // Extra space for '\0'
-    std::unique_ptr<char[]> buf(new char[size]);
-    std::snprintf(buf.get(), size, format.c_str(), args...);
-    return std::string(buf.get(),
-                       buf.get() + size - 1); // We don't want the '\0' inside
-}
+
  
 
 //验证登陆token，成功返回0，失败-1
@@ -31,9 +23,11 @@ int VerifyToken(string &user_name, string &token) {
         if (temp_user_name == user_name) {
             ret = 0;
         } else {
+            LOG_INFO << "redis_user_name: " << temp_user_name;
             ret = -1;
         }
     } else {
+        LOG_ERROR << "VerifyToken no cache_conn";
         ret = -1;
     }
 

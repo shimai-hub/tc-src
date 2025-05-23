@@ -5,6 +5,9 @@
 #include "api/api_login.h"
 #include "api/api_md5.h"
 #include "api/api_upload.h"
+#include "api/api_myfiles.h"
+#include "api/api_sharepicture.h"
+
 #include <atomic>
 #include <any>
 
@@ -47,7 +50,7 @@ CHttpconn::CHttpconn(TcpConnectionPtr tcp_conn):
         uint32_t len = buf->readableBytes();
 
         //LOG MESSAGE
-        cout << in_buf;
+        cout << in_buf << endl;
         
         //http报文解析
         CHttpParserWrapper http_parser;
@@ -70,6 +73,12 @@ CHttpconn::CHttpconn(TcpConnectionPtr tcp_conn):
             }
             else if(strncmp(url.c_str(), "/api/upload", 11) == 0){
                 _HandleUploadRequest(url, content);
+            }
+            else if(strncmp(url.c_str(), "/api/myfiles", 12) == 0){
+                _HandleMyfilesRequest(url, content);
+            }
+            else if(strncmp(url.c_str(), "/api/sharepic", 13) == 0){
+                _HandleShareRequest(url, content);
             }
             else{
                 //echo
@@ -142,6 +151,36 @@ int CHttpconn::_HandleMd5Request(string& url, string& post_data){
 int CHttpconn::_HandleUploadRequest(string& url, string& post_data){
     string resp_json;
     int ret = ApiUpload(post_data, resp_json);
+    
+    char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
+    uint32_t ulen = resp_json.length();
+    snprintf(http_body, HTTP_RESPONSE_JSON_MAX, HTTP_RESPONSE_JSON, ulen, resp_json.c_str());
+
+    tcp_conn_->send(http_body);
+
+    delete[] http_body;
+    LOG_INFO << "uuid" << uuid_ << ", http_send";
+    return 0;
+}
+
+int CHttpconn::_HandleMyfilesRequest(string& url, string& post_data){
+    string resp_json;
+    int ret = ApiMyfiles(url, post_data, resp_json);
+    
+    char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
+    uint32_t ulen = resp_json.length();
+    snprintf(http_body, HTTP_RESPONSE_JSON_MAX, HTTP_RESPONSE_JSON, ulen, resp_json.c_str());
+
+    tcp_conn_->send(http_body);
+
+    delete[] http_body;
+    LOG_INFO << "uuid" << uuid_ << ", http_send";
+    return 0;
+}
+
+int CHttpconn::_HandleShareRequest(string& url, string& post_data){
+    string resp_json;
+    int ret = ApiSharePicture(url, post_data, resp_json);
     
     char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
     uint32_t ulen = resp_json.length();

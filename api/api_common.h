@@ -65,7 +65,14 @@ int GetFileSuffix(const char *file_name, char *suffix);
 int VerifyToken(char *user, char *token);
 
 template <typename... Args>
-std::string FormatString(const std::string &format, Args... args);
+std::string FormatString(const std::string &format, Args... args) {
+    auto size = std::snprintf(nullptr, 0, format.c_str(), args...) +
+                1; // Extra space for '\0'
+    std::unique_ptr<char[]> buf(new char[size]);
+    std::snprintf(buf.get(), size, format.c_str(), args...);
+    return std::string(buf.get(),
+                       buf.get() + size - 1); // We don't want the '\0' inside
+}
 
 string RandomString(const int len);
 int VerifyToken(string &user_name, string &token);

@@ -67,7 +67,7 @@ void handleDealMd5(const char *user, const char *md5, const char *filename,
     char sql_cmd[SQL_MAX_LEN] = {0};
 
     CDBManager *db_manager = CDBManager::getInstance();
-    CDBConn *db_conn = db_manager->GetDBConn("tuchuang_slave");
+    CDBConn *db_conn = db_manager->GetDBConn("tuchuang_master");
     AUTO_REL_DBCONN(db_manager, db_conn);
     CacheManager *cache_manager = CacheManager::getInstance();
     CacheConn *cache_conn = cache_manager->GetCacheConn("token");
@@ -191,8 +191,8 @@ int ApiMd5(string &post_data, string &str_json) {
     //验证登陆token，成功返回0，失败-1
     ret = VerifyToken(user, token); //
     if (ret == 0) {
-        // handleDealMd5(user.c_str(), md5.c_str(), filename.c_str(), str_json); //秒传处理
-        encodeMd5Json(HTTP_RESP_FAIL, str_json);   // 暂时先取消MD5校验
+        handleDealMd5(user.c_str(), md5.c_str(), filename.c_str(), str_json); //秒传处理
+        // encodeMd5Json(HTTP_RESP_FAIL, str_json);   // 暂时先取消MD5校验
         return 0;
     } else {
         LOG_ERROR << "VerifyToken failed";
