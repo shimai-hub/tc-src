@@ -69,6 +69,7 @@ int registerUser(string& user_name, string& nick_name, string& pwd, string& phon
     //0，成功， 1，失败， 2，用户存在
     int ret = 0;
     uint32_t user_id = 0;
+
     //取出与数据库的连接
     CDBManager* db_manager = CDBManager::getInstance();
     CDBConn* db_conn = db_manager->GetDBConn("tuchuang_master");
@@ -76,6 +77,7 @@ int registerUser(string& user_name, string& nick_name, string& pwd, string& phon
         LOG_ERROR << "GetDBConn(tuchuang_master) failed";
         return -1;
     }
+    
     //组织sql，查询数据库
     string str_sql = FormatString("select id from user_info where user_name='%s'", user_name.c_str());
     CResultSet* result_set = db_conn->ExecuteQuery(str_sql.c_str());
@@ -136,23 +138,27 @@ int ApiRegisterUser(string& post_data, string& resp_json){
     LOG_INFO << "post_data: " << post_data;
 
     if(post_data.empty()){
-        LOG_ERROR << "decodeRegister failed";
-        encodeRegisterJson(1, resp_json);
-        return -1;
+        LOG_ERROR << "post_data empty";
+        ret = -1;
+        goto END;
     }
 
-    
-    //注册
     //反序列化
     ret = decodeRegisterJson(post_data, user_name, nick_name, pwd, phone, email);
     if(ret < 0){
-        encodeRegisterJson(1, resp_json);
-        return -1;
+        LOG_ERROR << "decodeRegisterJson failed";
+        ret = -1;
+        goto END;
     }
 
     //将注册信息写入数据库
     ret = registerUser(user_name, nick_name, pwd, phone, email);
-    encodeRegisterJson(ret, resp_json);
 
+END:
+    if(ret == 0){
+        encodeRegisterJson(HTTP_RESP_OK, resp_json);
+    }else{
+        encodeRegisterJson(HTTP_RESP_FAIL, resp_json);
+    }
     return ret;
 }
