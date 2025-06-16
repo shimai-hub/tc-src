@@ -105,6 +105,41 @@ int decodePictListJson(string& post_data, string& user_name, string& token, int&
     return 0;
 }
 
+int decodeCancelPictJson(string& post_data, string& user, string& token, string& urlmd5){
+    Json::Value root;
+    Json::Reader reader;
+    reader.parse(post_data, root);
+
+    if(root["urlmd5"].isNull()){
+        LOG_ERROR << "urlmd5 null";
+        return -1;
+    }
+    urlmd5 = root["urlmd5"].asString();
+
+    if(root["user"].isNull()){
+        LOG_ERROR << "user null";
+        return -1;
+    }
+    user = root["user"].asString();
+
+    if(root["token"].isNull()){
+        LOG_ERROR << "token null";
+        return -1;
+    }
+    token = root["token"].asString();
+
+    return 0;
+}
+
+int encodeCancelPictJson(int code, string& resp_json){
+    Json::Value root;
+    Json::FastWriter writer;
+    root["code"] = code;
+
+    resp_json = writer.write(root);
+
+    return 0;
+}
 
 //这个文件是否存在不关注
 int handleSharePicture(string& user_name, string& md5, string& file_name, string& resp_json){
@@ -185,7 +220,7 @@ int handleBrowsePicture(string& urlmd5, string& resp_json){
         goto END;
     }
 
-    //更新share_picture_list表的pv值,并返回用来访问的url
+    //更新share_picture_list表的浏览量pv,并返回用来访问的url
     pv++;
     sql_cmd = FormatString("update share_picture_list set pv = %d where urlmd5 = '%s'", pv, urlmd5.c_str());
     LOG_INFO << "执行: " << sql_cmd;
@@ -290,6 +325,26 @@ END:
     return ret;   
 }
 
+int handleCancelPicture(const char* user_name, const char* urlmd5, string& resp_json){
+    //获取数据库连接
+    CDBManager* db_manager = CDBManager::getInstance();
+    CDBConn* db_conn = db_manager->GetDBConn("tuchuang_master");
+    AUTO_REL_DBCONN(db_manager, db_conn);
+
+    //删除该urlmd5对应的图片分享
+    string sql_cmd = FormatString("delete from share_picture_list where user = '%s' and urlmd5 = '%s'",
+        user_name, urlmd5);
+    if(!db_conn->ExecutePassQuery(sql_cmd.c_str())){
+        LOG_ERROR << sql_cmd << "操作失败";
+        encodeSharePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
+        return -1;
+    }else{
+        encodeCancelPictJson(HTTP_RESP_OK, resp_json);
+    }
+
+    return 0;
+}
+
 int ApiSharePicture(string& url, string& post_data, string& resp_json){
     int ret = 0;
     char cmd[20] = {0};
@@ -308,23 +363,16 @@ int ApiSharePicture(string& url, string& post_data, string& resp_json){
 
         //反序列化
         ret = decodeSharePictJson(post_data, token, md5, user_name, file_name);
-        if(ret < 0){
-            encodeSharePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
-            LOG_ERROR << "decodeSharePictJson failed";
-            return -1;
-        }
 
         //校验token
         ret = VerifyToken(user_name, token);
-        if(ret < 0){
-            encodeSharePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
-            LOG_ERROR << "VerifyToken failed";
-            return -1;
-        }
 
         //生成并返回urlmd5
-        ret = handleSharePicture(user_name, md5, file_name, resp_json);
-
+        if(ret == 0){
+            handleSharePicture(user_name, md5, file_name, resp_json);
+        }else{
+            encodeSharePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
+        }
     }
     else if(strncmp(cmd, "browse", 6) == 0){
         //浏览请求，url改为完整下载路径url
@@ -332,8 +380,9 @@ int ApiSharePicture(string& url, string& post_data, string& resp_json){
 
         //反序列化
         ret = decodeBrowsePictJson(post_data, urlmd5);
+
+        //修改数据库，并返回浏览文件的url
         if(ret == 0){
-            //修改数据库，并返回浏览文件的url
             handleBrowsePicture(urlmd5, resp_json);
         }else{
             encodeBrowsePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
@@ -354,7 +403,23 @@ int ApiSharePicture(string& url, string& post_data, string& resp_json){
         if(ret == 0){
             handleGetSharePictList(user_name.c_str(), start, count, resp_json);
         }
+        else{
+            encodeSharePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
+        }
+    }
+    else if(strncmp(cmd, "cancel", 6) == 0){
+        //取消该用户的urlmd5对应的图片分享
+        LOG_INFO << "post_data: " << post_data;
 
+        //反序列化
+        ret = decodeCancelPictJson(post_data, user_name, token, urlmd5);
+
+        //删除该用户在share_picture_list的该图片记录
+        if(ret == 0){
+            handleCancelPicture(user_name.c_str(), urlmd5.c_str(), resp_json);
+        }else{
+            encodeSharePictJson(HTTP_RESP_FAIL, urlmd5, resp_json);
+        } 
     }
     else{
         LOG_INFO << "no handle to " << cmd;

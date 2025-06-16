@@ -7,6 +7,9 @@
 #include "api/api_upload.h"
 #include "api/api_myfiles.h"
 #include "api/api_sharepicture.h"
+#include "api/api_dealfile.h"
+#include "api/api_sharefiles.h"
+#include "api/api_deal_sharefiles.h"
 
 #include <atomic>
 #include <any>
@@ -50,7 +53,8 @@ CHttpconn::CHttpconn(TcpConnectionPtr tcp_conn):
         uint32_t len = buf->readableBytes();
 
         //LOG MESSAGE
-        cout << in_buf << endl;
+        LOG_INFO << "in_buf:";
+        LOG_INFO << in_buf;
         
         //http报文解析
         CHttpParserWrapper http_parser;
@@ -80,8 +84,18 @@ CHttpconn::CHttpconn(TcpConnectionPtr tcp_conn):
             else if(strncmp(url.c_str(), "/api/sharepic", 13) == 0){
                 _HandleShareRequest(url, content);
             }
+            else if(strncmp(url.c_str(), "/api/dealfile", 13) == 0){
+                _HandleDealfileRequest(url, content);
+            }
+            else if(strncmp(url.c_str(), "/api/sharefiles", 15) == 0){
+                _HandleSharefilesRequest(url, content);
+            }
+            else if(strncmp(url.c_str(), "/api/dealsharefile", 18) == 0){
+                _HandleDealsharefileRequest(url, content);
+            }
             else{
                 //echo
+                LOG_INFO << "no handle for " << url;
                 char* resp_content = new char[256];
                 string str_json = "{\"code\":0}";
                 uint32_t len_json = str_json.size();
@@ -181,6 +195,51 @@ int CHttpconn::_HandleMyfilesRequest(string& url, string& post_data){
 int CHttpconn::_HandleShareRequest(string& url, string& post_data){
     string resp_json;
     int ret = ApiSharePicture(url, post_data, resp_json);
+    
+    char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
+    uint32_t ulen = resp_json.length();
+    snprintf(http_body, HTTP_RESPONSE_JSON_MAX, HTTP_RESPONSE_JSON, ulen, resp_json.c_str());
+
+    tcp_conn_->send(http_body);
+
+    delete[] http_body;
+    LOG_INFO << "uuid" << uuid_ << ", http_send";
+    return 0;
+}
+
+int CHttpconn::_HandleDealfileRequest(string& url, string& post_data){
+    string resp_json;
+    int ret = ApiDealfile(url, post_data, resp_json);
+    
+    char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
+    uint32_t ulen = resp_json.length();
+    snprintf(http_body, HTTP_RESPONSE_JSON_MAX, HTTP_RESPONSE_JSON, ulen, resp_json.c_str());
+
+    tcp_conn_->send(http_body);
+
+    delete[] http_body;
+    LOG_INFO << "uuid" << uuid_ << ", http_send";
+    return 0;
+}
+
+int CHttpconn::_HandleSharefilesRequest(string& url, string& post_data){
+    string resp_json;
+    int ret = ApiShareFiles(url, post_data, resp_json);
+    
+    char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
+    uint32_t ulen = resp_json.length();
+    snprintf(http_body, HTTP_RESPONSE_JSON_MAX, HTTP_RESPONSE_JSON, ulen, resp_json.c_str());
+
+    tcp_conn_->send(http_body);
+
+    delete[] http_body;
+    LOG_INFO << "uuid" << uuid_ << ", http_send";
+    return 0;
+}
+
+int CHttpconn::_HandleDealsharefileRequest(string& url, string& post_data){
+    string resp_json;
+    int ret = ApiDealsharefile(url, post_data, resp_json);
     
     char* http_body = new char[HTTP_RESPONSE_JSON_MAX];
     uint32_t ulen = resp_json.length();

@@ -322,4 +322,11 @@ string RandomString(const int len) /*参数为字符串的长度*/
     return str; /*返回生成的随机字符串*/
 }
 
-
+int RemoveFileFromFastDfs(const char* fileid){
+    int ret = 0;
+    char cmd[1024 * 2] = {0};
+    sprintf(cmd, "fdfs_delete_file %s %s", s_dfs_path_client.c_str(), fileid);
+    ret = system(cmd);
+    LOG_INFO << "RemoveFileFromFastDfs ret = " << ret;
+    return ret;
+}

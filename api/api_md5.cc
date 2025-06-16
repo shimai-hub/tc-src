@@ -148,7 +148,8 @@ void handleDealMd5(const char *user, const char *md5, const char *filename,
         }
 
         md5_state = Md5Ok;
-    } else //没有结果，秒传失败
+    }
+    else //没有结果，秒传失败
     {
         LOG_INFO << "秒传失败";
         md5_state = Md5Failed;

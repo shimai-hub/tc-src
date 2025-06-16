@@ -65,7 +65,7 @@ private:
         }
     }
     void onMessage(const TcpConnectionPtr& conn, Buffer* buf, Timestamp time){
-        LOG_INFO << "onMessage" << conn.get();
+        LOG_INFO << "onMessage: " << conn.get();
 
         uint32_t uuid = std::any_cast<uint32_t>(conn->getContext());
         CHttpConnPtr& http_conn = s_http_map[uuid];

@@ -160,7 +160,7 @@ int getUserFilesList(string cmd, string& user_name, int& start, int& count, stri
             file["md5"] = result_set->GetString("md5");
             file["create_time"] = result_set->GetString("create_time");
             file["file_name"] = result_set->GetString("file_name");
-            file["shared_status"] = result_set->GetInt("share_status");
+            file["shared_status"] = result_set->GetInt("shared_status");
             file["pv"] = result_set->GetInt("pv");
             
             file["url"] = result_set->GetString("url");
